@@ -22,7 +22,7 @@ const { data, isPending } = useConvexQuery(api.tasks.get);
   <div class="flex flex-col h-screen bg-gray-100 font-gilroy md:flex-row">
     <!-- Hamburger Button (Mobile Only) -->
     <button
-    v-if="!showSidebar"
+      v-if="!showSidebar"
       class="absolute top-4 left-4 z-40 md:hidden bg-gray-900 text-white p-2 rounded"
       @click="showSidebar = true"
       aria-label="Open sidebar"
@@ -89,6 +89,13 @@ const { data, isPending } = useConvexQuery(api.tasks.get);
               <span class="text-xs opacity-60">{{ chat.time }}</span>
             </li>
           </ul>
+
+          <!-- <span v-if="isPending"> Loading... </span>
+          <ul v-else>
+            <li v-for="todo in data">
+              {{ todo.text }} {{ todo.isCompleted ? "☑" : "☐" }}
+            </li>
+          </ul> -->
         </div>
       </div>
       <button
@@ -149,7 +156,6 @@ const { data, isPending } = useConvexQuery(api.tasks.get);
     </div>
   </div>
 </template>
-
 
 <script>
 export default {
