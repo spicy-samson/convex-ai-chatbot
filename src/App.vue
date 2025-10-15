@@ -1,23 +1,3 @@
-<!-- <template>
-  <h1 class="text-3xl font-bold text-blue-500">Hello Tailwind!</h1>
-  <span v-if="isPending"> Loading... </span>
-  <ul v-else>
-    <li v-for="todo in data">
-      {{ todo.text }} {{ todo.isCompleted ? "☑" : "☐" }}
-    </li>
-  </ul>
-</template>
-<script setup lang="ts">
-import { useConvexQuery } from "convex-vue";
-import { api } from "../convex/_generated/api";
-
-const { data, isPending } = useConvexQuery(api.tasks.get);
-</script>
-
-<style scoped>
-
-</style> -->
-
 <template>
   <div class="flex flex-col h-screen bg-gray-100 font-gilroy md:flex-row">
     <!-- Hamburger Button (Mobile Only) -->
@@ -79,14 +59,23 @@ const { data, isPending } = useConvexQuery(api.tasks.get);
         </div>
         <div>
           <h3 class="text-sm font-semibold mb-2 opacity-70">Recent Chats</h3>
-          <ul>
+          <span v-if="isPending">Loading...</span>
+          <ul v-else>
             <li
-              v-for="chat in dummyChats"
-              :key="chat.id"
-              class="mb-2 px-3 py-2 rounded hover:bg-gray-800 cursor-pointer transition"
+              v-for="conv in conversations"
+              :key="conv._id"
+              :class="[
+                'cursor-pointer px-3 py-2 rounded mb-2',
+                conv._id === conversationId
+                  ? 'bg-blue-100 font-semibold'
+                  : 'hover:bg-gray-200',
+              ]"
+              @click="conversationId = conv._id"
             >
-              <span class="truncate block">{{ chat.title }}</span>
-              <span class="text-xs opacity-60">{{ chat.time }}</span>
+              <span class="truncate block">{{ conv.title }}</span>
+              <span class="block text-xs text-gray-500">{{
+                new Date(conv.created_at).toLocaleString()
+              }}</span>
             </li>
           </ul>
 
@@ -118,90 +107,157 @@ const { data, isPending } = useConvexQuery(api.tasks.get);
       <div
         class="flex-1 overflow-y-auto px-2 py-4 pb-28 md:px-6 md:py-8 md:pb-32"
       >
-        <div
-          v-for="(msg, idx) in messages"
-          :key="idx"
-          :class="[
-            'mb-3 p-3 rounded-lg max-w-[90%] break-words text-sm',
-            msg.role === 'user'
-              ? 'bg-blue-100 self-end ml-auto'
-              : 'bg-gray-100 self-start mr-auto',
-            'md:mb-4 md:p-4 md:text-base md:max-w-[70%]',
-          ]"
-        >
-          <strong>{{ msg.role === "user" ? "You" : "AI" }}:</strong>
-          {{ msg.content }}
+        <div v-if="messages && messages.length">
+          <div
+            v-for="(msg, idx) in messages"
+            :key="idx"
+            :class="msg.role === 'user' ? 'text-right' : 'text-left'"
+            class="mb-4"
+          >
+            <div
+              :class="[
+                'inline-block px-4 py-2 rounded',
+                msg.role === 'user'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 text-gray-900',
+              ]"
+            >
+              {{ msg.content }}
+            </div>
+          </div>
+        </div>
+        <div v-else class="text-gray-400 text-center mt-10">
+          No messages yet.
         </div>
       </div>
-      <form
-        @submit.prevent="sendMessage"
-        class="fixed left-0 right-0 bottom-0 bg-gray-100 px-2 py-3 flex gap-2 shadow-[0_-2px_8px_rgba(0,0,0,0.04)] z-10 md:left-64 md:px-6 md:py-4 md:gap-3"
-      >
-        <input
-          v-model="input"
-          type="text"
-          placeholder="Type your message..."
-          autocomplete="off"
-          :disabled="loading"
-          class="flex-1 p-2 rounded-md border border-gray-300 text-sm outline-none disabled:bg-gray-200 md:p-3 md:text-base"
-        />
-        <button
-          type="submit"
-          :disabled="loading || !input.trim()"
-          class="px-4 rounded-md border-none bg-emerald-600 text-white font-semibold text-sm transition-colors duration-200 hover:bg-emerald-700 disabled:bg-gray-400 disabled:cursor-not-allowed md:px-6 md:text-base"
-        >
-          Send
-        </button>
-      </form>
     </div>
+    <form
+      @submit.prevent="sendMessage"
+      class="fixed left-0 right-0 bottom-0 bg-gray-100 px-2 py-3 flex gap-2 shadow-[0_-2px_8px_rgba(0,0,0,0.04)] z-10 md:left-64 md:px-6 md:py-4 md:gap-3"
+    >
+      <input
+        v-model="input"
+        type="text"
+        placeholder="Type your message..."
+        autocomplete="off"
+        :disabled="loading"
+        class="flex-1 p-2 rounded-md border border-gray-300 text-sm outline-none disabled:bg-gray-200 md:p-3 md:text-base"
+      />
+      <button
+        type="submit"
+        :disabled="loading || !input.trim()"
+        class="px-4 rounded-md border-none bg-emerald-600 text-white font-semibold text-sm transition-colors duration-200 hover:bg-emerald-700 disabled:bg-gray-400 disabled:cursor-not-allowed md:px-6 md:text-base"
+      >
+        Send
+      </button>
+    </form>
   </div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      input: "",
-      messages: [],
-      loading: false,
-      showSidebar: false,
-      dummyChats: [
-        { id: 1, title: "Project Standup", time: "10:30 AM" },
-        { id: 2, title: "Weekend Tasks", time: "Yesterday" },
-        { id: 3, title: "Stripe Integration", time: "2 days ago" },
-        { id: 4, title: "Cloudflare Workers Q&A", time: "3 days ago" },
-        { id: 5, title: "General Discussion", time: "Last week" },
-      ],
-    };
-  },
-  methods: {
-    async sendMessage() {
-      if (!this.input.trim() || this.loading) return;
-      const userMsg = { role: "user", content: this.input };
-      this.messages.push(userMsg);
-      this.input = "";
-      this.loading = true;
+<script setup>
+import { ref, onMounted, watch } from "vue";
+import { useConvexQuery, useConvexMutation } from "convex-vue";
+import { api } from "../convex/_generated/api";
 
-      try {
-        const res = await fetch("http://localhost:3000/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: this.messages }),
-        });
-        const data = await res.json();
-        this.messages.push({ role: "assistant", content: data.reply });
-      } catch (e) {
-        this.messages.push({
-          role: "assistant",
-          content: "Error: Could not get response.",
-        });
-      }
-      this.loading = false;
-    },
-    logout() {
-      // Dummy logout action
-      alert("Logged out!");
-    },
-  },
-};
+const input = ref("");
+const loading = ref(false);
+const showSidebar = ref(false);
+const conversationId = ref(null);
+
+const { data: conversations } = useConvexQuery(
+  api.conversations.getConversations,
+  {
+    user_id: "guest",
+  }
+);
+const { mutate: sendMessageConvex } = useConvexMutation(
+  api.messages.sendMessage
+);
+const { mutate: createConversation } = useConvexMutation(
+  api.conversations.createConversation
+);
+
+// Correct: useConvexQuery at the top level, with reactive param
+const { data: messages = [] } = useConvexQuery(api.messages.getMessages, () =>
+  conversationId.value ? { conversation_id: conversationId.value } : undefined
+);
+
+watch(conversations, async (newVal) => {
+  if (newVal && newVal.length > 0 && !conversationId.value) {
+    conversationId.value = newVal[0]._id;
+  } else if (!newVal || newVal.length === 0) {
+    const newConv = await createConversation({ user_id: "guest" });
+    conversationId.value = newConv._id;
+  }
+});
+
+async function ensureConversation() {
+  if (conversationId.value) return;
+
+  if (conversations && conversations.length > 0) {
+    conversationId.value = conversations[0]._id;
+  } else {
+    const newConv = await createConversation({ user_id: "guest" });
+    conversationId.value = newConv._id;
+  }
+}
+
+async function sendMessage() {
+  if (!input.value.trim() || loading.value) return;
+
+  await ensureConversation(); // ✅ make sure we have one first
+
+  const userInput = input.value;
+  input.value = "";
+  await sendMessageConvex({
+    conversation_id: conversationId.value,
+    role: "user",
+    content: userInput,
+  });
+
+  loading.value = true;
+
+  console.log("-----------------------");
+      console.log(history);
+      console.log("-----------------------");
+
+  // Wait for the message to be indexed before fetching AI reply
+  setTimeout(async () => {
+    try {
+      console.log("Before history variable, error happens after here")
+      const history = (messages ?? []).concat({
+        role: "user",
+        content: userInput,
+      });
+      console.log("-----------------------");
+      console.log(history);
+      console.log("-----------------------");
+      const res = await fetch("http://localhost:3000/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: history.concat({ role: "user", content: userInput }),
+        }),
+      });
+      const data = await res.json();
+      console.log("AI API response:", data);
+
+      await sendMessageConvex({
+        conversation_id: conversationId.value,
+        role: "assistant",
+        content: data.reply,
+      });
+    } catch (e) {
+      await sendMessageConvex({
+        conversation_id: conversationId.value,
+        role: "assistant",
+        content: "Error: Could not get response.",
+      });
+    }
+    loading.value = false;
+  }, 1200);
+}
+function logout() {
+  alert("Logged out!");
+}
 </script>
