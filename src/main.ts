@@ -1,5 +1,3 @@
-import "./assets/main.css";
-
 import { convexVue } from "convex-vue";
 import { createApp } from "vue";
 import App from "./App.vue";
