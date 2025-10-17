@@ -178,7 +178,7 @@ const { mutate: createConversation } = useConvexMutation(
 );
 
 // Correct: useConvexQuery at the top level, with reactive param
-const { data: messages = [] } = useConvexQuery(api.messages.getMessages, () =>
+const { data: messages } = useConvexQuery(api.messages.getMessages, () =>
   conversationId.value ? { conversation_id: conversationId.value } : undefined
 );
 
@@ -217,15 +217,11 @@ async function sendMessage() {
 
   loading.value = true;
 
-  console.log("-----------------------");
-      console.log(history);
-      console.log("-----------------------");
-
   // Wait for the message to be indexed before fetching AI reply
   setTimeout(async () => {
     try {
-      console.log("Before history variable, error happens after here")
-      const history = (messages ?? []).concat({
+      const safeMessages = Array.isArray(messages) ? messages : []; // Always check with Array.isArray(messages) before using .concat or .map on data from Convex.
+      const history = safeMessages.concat({
         role: "user",
         content: userInput,
       });
@@ -236,7 +232,7 @@ async function sendMessage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: history.concat({ role: "user", content: userInput }),
+          messages: history,
         }),
       });
       const data = await res.json();
@@ -248,10 +244,11 @@ async function sendMessage() {
         content: data.reply,
       });
     } catch (e) {
+      console.log(e);
       await sendMessageConvex({
         conversation_id: conversationId.value,
         role: "assistant",
-        content: "Error: Could not get response.",
+        content: "Error: Could not get response. (from frontend)",
       });
     }
     loading.value = false;
