@@ -1,6 +1,7 @@
 import { convexVue } from "convex-vue";
 import { createApp } from "vue";
 import App from "./App.vue";
+import './index.css' // or './assets/main.css'
 
 const app = createApp(App);
 
