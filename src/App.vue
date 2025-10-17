@@ -7,19 +7,7 @@
       @click="showSidebar = true"
       aria-label="Open sidebar"
     >
-      <svg
-        class="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M4 6h16M4 12h16M4 18h16"
-        />
-      </svg>
+    <FlowbiteBarsOutline/>
     </button>
 
     <!-- Sidebar -->
@@ -58,6 +46,12 @@
           </button>
         </div>
         <div>
+          <div class="my-6">
+            <h6 class="flex items-center gap-2">
+              New chat
+             <FlowbiteEditOutline/>
+            </h6>
+          </div>
           <h3 class="text-sm font-semibold mb-2 opacity-70">Recent Chats</h3>
           <span v-if="isPending">Loading...</span>
           <ul v-else>
@@ -158,6 +152,8 @@
 import { ref, onMounted, watch } from "vue";
 import { useConvexQuery, useConvexMutation } from "convex-vue";
 import { api } from "../convex/_generated/api";
+import FlowbiteEditOutline  from "../assets/svgs/EditSvg.vue";
+import  FlowbiteBarsOutline from "../assets/svgs/HamBurger.vue"
 
 const input = ref("");
 const loading = ref(false);
