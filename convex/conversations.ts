@@ -29,6 +29,17 @@ export const getConversations = query({
 export const deleteConversation = mutation({
   args: { conversationId: v.id("conversations") },
   handler: async (ctx, args) => {
+    // 1. Find all messages for this conversation
+    const messages = await ctx.db
+      .query("messages")
+      .filter(q => q.eq(q.field("conversation_id"), args.conversationId))
+      .collect();
+
+    // 2. Delete each message
+    for (const msg of messages) {
+      await ctx.db.delete(msg._id);
+    }
+    
     await ctx.db.delete(args.conversationId);
   }
 })
