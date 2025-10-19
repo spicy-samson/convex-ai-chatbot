@@ -7,7 +7,7 @@
       @click="showSidebar = true"
       aria-label="Open sidebar"
     >
-    <FlowbiteBarsOutline/>
+      <FlowbiteBarsOutline />
     </button>
 
     <!-- Sidebar -->
@@ -49,7 +49,14 @@
           <div class="my-6">
             <h6 class="flex items-center gap-2">
               New chat
-             <FlowbiteEditOutline/>
+              <button
+                class="ml-2 p-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white flex items-center"
+                @click="handleNewChat"
+                aria-label="Start new chat"
+                type="button"
+              >
+                <FlowbiteEditOutline class="w-4 h-4" />
+              </button>
             </h6>
           </div>
           <h3 class="text-sm font-semibold mb-2 opacity-70">Recent Chats</h3>
@@ -66,7 +73,21 @@
               ]"
               @click="conversationId = conv._id"
             >
-              <span class="truncate block">{{ conv.title }}</span>
+              <div class="flex items-center justify-between">
+                <span
+                  class="truncate block font-extrabold"
+                  :class="
+                    conv._id === conversationId ? 'text-black' : 'text-white'
+                  "
+                  >{{ conv.title }}</span
+                >
+                <FlowbiteTrashBinSolid
+                  v-if="conv._id === conversationId"
+                  class="ml-2 text-red-600"
+                  @click.stop="deleteConversationById(conv._id)"
+                />
+              </div>
+
               <span class="block text-xs text-gray-500">{{
                 new Date(conv.created_at).toLocaleString()
               }}</span>
@@ -99,7 +120,7 @@
     <!-- Chat Section -->
     <div class="flex-1 flex flex-col relative bg-white">
       <div
-        class="flex-1 overflow-y-auto px-2 py-4 pb-28 md:px-6 md:py-8 md:pb-32"
+        class="flex-1 overflow-y-auto m-8 px-2 py-4 pb-28 md:px-6 md:py-8 md:pb-32"
       >
         <div v-if="messages && messages.length">
           <div
@@ -152,8 +173,9 @@
 import { ref, onMounted, watch } from "vue";
 import { useConvexQuery, useConvexMutation } from "convex-vue";
 import { api } from "../convex/_generated/api";
-import FlowbiteEditOutline  from "../assets/svgs/EditSvg.vue";
-import  FlowbiteBarsOutline from "../assets/svgs/HamBurger.vue"
+import FlowbiteEditOutline from "../assets/svgs/EditSvg.vue";
+import FlowbiteBarsOutline from "../assets/svgs/HamBurger.vue";
+import FlowbiteTrashBinSolid from "../assets/svgs/TrashSvg.vue";
 
 const input = ref("");
 const loading = ref(false);
@@ -178,6 +200,10 @@ const { data: messages } = useConvexQuery(api.messages.getMessages, () =>
   conversationId.value ? { conversation_id: conversationId.value } : undefined
 );
 
+const { mutate: deleteConversation } = useConvexMutation(
+  api.conversations.deleteConversation
+);
+
 watch(conversations, async (newVal) => {
   if (newVal && newVal.length > 0 && !conversationId.value) {
     conversationId.value = newVal[0]._id;
@@ -195,6 +221,24 @@ async function ensureConversation() {
   } else {
     const newConv = await createConversation({ user_id: "guest" });
     conversationId.value = newConv._id;
+  }
+}
+
+async function handleNewChat() {
+  const newConv = await createConversation({ user_id: "guest" });
+  if (newConv && newConv._id) {
+    conversationId.value = newConv._id;
+    input.value = "";
+  }
+}
+
+async function deleteConversationById(convId) {
+  if (!convId) return;
+  await deleteConversation({ conversationId: convId });
+  if (conversations && conversations.length > 0) {
+    const remaining = conversations.filter((c) => c._id !== convId);
+  } else {
+    conversationId.value = null;
   }
 }
 

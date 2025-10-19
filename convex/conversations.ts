@@ -7,8 +7,8 @@ export const createConversation = mutation({
     const now = Date.now();
     const conversationId = await db.insert("conversations", {
       user_id,
-      title: title ?? "New Chat",
-      created_at: now,
+        title: title ?? "New Chat",
+        created_at: now,
       updated_at: now,
     });
     return conversationId;
@@ -25,3 +25,10 @@ export const getConversations = query({
       .collect();
   },
 });
+
+export const deleteConversation = mutation({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.conversationId);
+  }
+})
