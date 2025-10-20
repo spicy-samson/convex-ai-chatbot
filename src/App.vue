@@ -170,131 +170,23 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
-import { useConvexQuery, useConvexMutation } from "convex-vue";
-import { api } from "../convex/_generated/api";
+import { ref } from "vue";
+import { useChatbot } from "../composables/useChatbot.js";
 import FlowbiteEditOutline from "../assets/svgs/EditSvg.vue";
 import FlowbiteBarsOutline from "../assets/svgs/HamBurger.vue";
 import FlowbiteTrashBinSolid from "../assets/svgs/TrashSvg.vue";
 
-const input = ref("");
-const loading = ref(false);
 const showSidebar = ref(false);
-const conversationId = ref(null);
 
-const { data: conversations } = useConvexQuery(
-  api.conversations.getConversations,
-  {
-    user_id: "guest",
-  }
-);
-const { mutate: sendMessageConvex } = useConvexMutation(
-  api.messages.sendMessage
-);
-const { mutate: createConversation } = useConvexMutation(
-  api.conversations.createConversation
-);
-
-// Correct: useConvexQuery at the top level, with reactive param
-const { data: messages } = useConvexQuery(api.messages.getMessages, () =>
-  conversationId.value ? { conversation_id: conversationId.value } : undefined
-);
-
-const { mutate: deleteConversation } = useConvexMutation(
-  api.conversations.deleteConversation
-);
-
-watch(conversations, async (newVal) => {
-  if (newVal && newVal.length > 0 && !conversationId.value) {
-    conversationId.value = newVal[0]._id;
-  } else if (!newVal || newVal.length === 0) {
-    const newConv = await createConversation({ user_id: "guest" });
-    conversationId.value = newConv._id;
-  }
-});
-
-async function ensureConversation() {
-  if (conversationId.value) return;
-
-  if (conversations && conversations.length > 0) {
-    conversationId.value = conversations[0]._id;
-  } else {
-    const newConv = await createConversation({ user_id: "guest" });
-    conversationId.value = newConv._id;
-  }
-}
-
-async function handleNewChat() {
-  const newConv = await createConversation({ user_id: "guest" });
-  if (newConv && newConv._id) {
-    conversationId.value = newConv._id;
-    input.value = "";
-  }
-}
-
-async function deleteConversationById(convId) {
-  if (!convId) return;
-  await deleteConversation({ conversationId: convId });
-  if (conversations && conversations.length > 0) {
-    const remaining = conversations.filter((c) => c._id !== convId);
-  } else {
-    conversationId.value = null;
-  }
-}
-
-async function sendMessage() {
-  if (!input.value.trim() || loading.value) return;
-
-  await ensureConversation(); // ✅ make sure we have one first
-
-  const userInput = input.value;
-  input.value = "";
-  await sendMessageConvex({
-    conversation_id: conversationId.value,
-    role: "user",
-    content: userInput,
-  });
-
-  loading.value = true;
-
-  // Wait for the message to be indexed before fetching AI reply
-  setTimeout(async () => {
-    try {
-      const safeMessages = Array.isArray(messages) ? messages : []; // Always check with Array.isArray(messages) before using .concat or .map on data from Convex.
-      const history = safeMessages.concat({
-        role: "user",
-        content: userInput,
-      });
-      console.log("-----------------------");
-      console.log(history);
-      console.log("-----------------------");
-      const res = await fetch("http://localhost:3000/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: history,
-        }),
-      });
-      const data = await res.json();
-      console.log("AI API response:", data);
-
-      await sendMessageConvex({
-        conversation_id: conversationId.value,
-        role: "assistant",
-        content: data.reply,
-      });
-    } catch (e) {
-      console.log(e);
-      await sendMessageConvex({
-        conversation_id: conversationId.value,
-        role: "assistant",
-        content: "Error: Could not get response. (from frontend)",
-      });
-    }
-    loading.value = false;
-  }, 1200);
-}
-function logout() {
-  alert("Logged out!");
-}
+const {
+  input,
+  loading,
+  conversationId,
+  conversations,
+  messages,
+  sendMessage,
+  handleNewChat,
+  deleteConversationById,
+  logout,
+} = useChatbot("guest");
 </script>
