@@ -12,7 +12,7 @@ const githubToken = process.env.VITE_GITHUB_TOKEN;
 const openaiApiKey = process.env.VITE_OPENAI_API_KEY;
 const endpoint = "https://models.github.ai/inference";
 const model = "openai/gpt-4.1-mini";
-const systemPrompt = process.env.VITE_TEST_SYSTEM_PROMPT;
+const systemPrompt = process.env.VITE_DSA_SYSTEM_PROMPT;
 
 const client = new OpenAI({
   baseURL: githubToken ? endpoint : undefined,
