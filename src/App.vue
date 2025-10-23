@@ -7,7 +7,7 @@
       @click="showSidebar = true"
       aria-label="Open sidebar"
     >
-    <FlowbiteBarsOutline/>
+      <FlowbiteBarsOutline />
     </button>
 
     <!-- Sidebar -->
@@ -49,7 +49,14 @@
           <div class="my-6">
             <h6 class="flex items-center gap-2">
               New chat
-             <FlowbiteEditOutline/>
+              <button
+                class="ml-2 p-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white flex items-center"
+                @click="handleNewChat"
+                aria-label="Start new chat"
+                type="button"
+              >
+                <FlowbiteEditOutline class="w-4 h-4" />
+              </button>
             </h6>
           </div>
           <h3 class="text-sm font-semibold mb-2 opacity-70">Recent Chats</h3>
@@ -66,7 +73,21 @@
               ]"
               @click="conversationId = conv._id"
             >
-              <span class="truncate block">{{ conv.title }}</span>
+              <div class="flex items-center justify-between">
+                <span
+                  class="truncate block font-extrabold"
+                  :class="
+                    conv._id === conversationId ? 'text-black' : 'text-white'
+                  "
+                  >{{ conv.title }}</span
+                >
+                <FlowbiteTrashBinSolid
+                  v-if="conv._id === conversationId"
+                  class="ml-2 text-red-600"
+                  @click.stop="deleteConversationById(conv._id)"
+                />
+              </div>
+
               <span class="block text-xs text-gray-500">{{
                 new Date(conv.created_at).toLocaleString()
               }}</span>
@@ -99,7 +120,7 @@
     <!-- Chat Section -->
     <div class="flex-1 flex flex-col relative bg-white">
       <div
-        class="flex-1 overflow-y-auto px-2 py-4 pb-28 md:px-6 md:py-8 md:pb-32"
+        class="flex-1 overflow-y-auto m-8 px-2 py-4 pb-28 md:px-6 md:py-8 md:pb-32"
       >
         <div v-if="messages && messages.length">
           <div
@@ -149,108 +170,23 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
-import { useConvexQuery, useConvexMutation } from "convex-vue";
-import { api } from "../convex/_generated/api";
-import FlowbiteEditOutline  from "../assets/svgs/EditSvg.vue";
-import  FlowbiteBarsOutline from "../assets/svgs/HamBurger.vue"
+import {ref} from 'vue';
+import { useChatbot } from "../composables/useChatbot.js";
+import FlowbiteEditOutline from "../assets/svgs/EditSvg.vue";
+import FlowbiteBarsOutline from "../assets/svgs/HamBurger.vue";
+import FlowbiteTrashBinSolid from "../assets/svgs/TrashSvg.vue";
 
-const input = ref("");
-const loading = ref(false);
 const showSidebar = ref(false);
-const conversationId = ref(null);
 
-const { data: conversations } = useConvexQuery(
-  api.conversations.getConversations,
-  {
-    user_id: "guest",
-  }
-);
-const { mutate: sendMessageConvex } = useConvexMutation(
-  api.messages.sendMessage
-);
-const { mutate: createConversation } = useConvexMutation(
-  api.conversations.createConversation
-);
-
-// Correct: useConvexQuery at the top level, with reactive param
-const { data: messages } = useConvexQuery(api.messages.getMessages, () =>
-  conversationId.value ? { conversation_id: conversationId.value } : undefined
-);
-
-watch(conversations, async (newVal) => {
-  if (newVal && newVal.length > 0 && !conversationId.value) {
-    conversationId.value = newVal[0]._id;
-  } else if (!newVal || newVal.length === 0) {
-    const newConv = await createConversation({ user_id: "guest" });
-    conversationId.value = newConv._id;
-  }
-});
-
-async function ensureConversation() {
-  if (conversationId.value) return;
-
-  if (conversations && conversations.length > 0) {
-    conversationId.value = conversations[0]._id;
-  } else {
-    const newConv = await createConversation({ user_id: "guest" });
-    conversationId.value = newConv._id;
-  }
-}
-
-async function sendMessage() {
-  if (!input.value.trim() || loading.value) return;
-
-  await ensureConversation(); // ✅ make sure we have one first
-
-  const userInput = input.value;
-  input.value = "";
-  await sendMessageConvex({
-    conversation_id: conversationId.value,
-    role: "user",
-    content: userInput,
-  });
-
-  loading.value = true;
-
-  // Wait for the message to be indexed before fetching AI reply
-  setTimeout(async () => {
-    try {
-      const safeMessages = Array.isArray(messages) ? messages : []; // Always check with Array.isArray(messages) before using .concat or .map on data from Convex.
-      const history = safeMessages.concat({
-        role: "user",
-        content: userInput,
-      });
-      console.log("-----------------------");
-      console.log(history);
-      console.log("-----------------------");
-      const res = await fetch("http://localhost:3000/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: history,
-        }),
-      });
-      const data = await res.json();
-      console.log("AI API response:", data);
-
-      await sendMessageConvex({
-        conversation_id: conversationId.value,
-        role: "assistant",
-        content: data.reply,
-      });
-    } catch (e) {
-      console.log(e);
-      await sendMessageConvex({
-        conversation_id: conversationId.value,
-        role: "assistant",
-        content: "Error: Could not get response. (from frontend)",
-      });
-    }
-    loading.value = false;
-  }, 1200);
-}
-function logout() {
-  alert("Logged out!");
-}
+const {
+  input,
+  loading,
+  conversationId,
+  conversations,
+  messages,
+  sendMessage,
+  handleNewChat,
+  deleteConversationById,
+  logout,
+} = useChatbot("guest");
 </script>

@@ -7,6 +7,7 @@ export default defineSchema({
     title: v.string(),
     created_at: v.number(),
     updated_at: v.number(),
+    length: v.optional(v.number()),
   }),
   messages: defineTable({
     conversation_id: v.id("conversations"),
