@@ -170,7 +170,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import {ref} from 'vue';
 import { useChatbot } from "../composables/useChatbot.js";
 import FlowbiteEditOutline from "../assets/svgs/EditSvg.vue";
 import FlowbiteBarsOutline from "../assets/svgs/HamBurger.vue";

@@ -1,6 +1,6 @@
 // convex/messages.ts
 import { mutation, query } from "./_generated/server";
-import { v } from 'convex/values';
+import { v } from "convex/values";
 
 export const sendMessage = mutation({
   args: {
@@ -16,8 +16,15 @@ export const sendMessage = mutation({
       created_at: Date.now(),
     });
 
-    // Update conversation timestamp
-    await db.patch(conversation_id, { updated_at: Date.now() });
+    // 2️⃣ Fetch the conversation
+    const conversation = await db.get(conversation_id);
+    if (!conversation) throw new Error("Conversation not found");
+
+    // 3️⃣ Update the timestamp + increment manually
+    await db.patch(conversation_id, {
+      updated_at: Date.now(),
+      length: (conversation.length ?? 0) + 1,
+    });
   },
 });
 
@@ -26,7 +33,7 @@ export const getMessages = query({
   handler: async ({ db }, { conversation_id }) => {
     return await db
       .query("messages")
-      .filter(q => q.eq(q.field("conversation_id"), conversation_id))
+      .filter((q) => q.eq(q.field("conversation_id"), conversation_id))
       .order("asc")
       .collect();
   },

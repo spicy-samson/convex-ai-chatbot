@@ -23,6 +23,9 @@ export function useChatbot(userId = "guest") {
   const { mutate: deleteConversation } = useConvexMutation(
     api.conversations.deleteConversation
   );
+  const { mutate: updateConversationTitle } = useConvexMutation(
+    api.conversations.updateConversationTitle
+  );
 
   watch(conversations, async (newVal) => {
     if (newVal && newVal.length > 0 && !conversationId.value) {
@@ -64,7 +67,10 @@ export function useChatbot(userId = "guest") {
         const res = await fetch("http://localhost:3000/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: history }),
+          body: JSON.stringify({
+            conversationId: conversationId.value,
+            messages: history,
+          }),
         });
         const data = await res.json();
         await sendMessageConvex({
@@ -72,7 +78,17 @@ export function useChatbot(userId = "guest") {
           role: "assistant",
           content: data.reply,
         });
+        
+        // If a title was generated, update it in the database
+        if (data.title && conversationId.value) {
+          console.log("Updating conversation title from frontend:", data.title);
+          await updateConversationTitle({
+            conversationId: conversationId.value,
+            title: data.title
+          });
+        }
       } catch (e) {
+        console.error("Error in sendMessage:", e);
         await sendMessageConvex({
           conversation_id: conversationId.value,
           role: "assistant",
